@@ -1,10 +1,11 @@
 import React, { useState, useMemo, useEffect } from 'react'
 import { FilecoinNumber } from '@glif/filecoin-number'
+import { Message } from '@glif/filecoin-message'
 import PropTypes from 'prop-types'
 import * as dayjs from 'dayjs'
 import * as relativeTime from 'dayjs/plugin/relativeTime'
 import {
-  Message,
+  Message as MessageType,
   useGasCostQuery,
   useMessageReceiptQuery
 } from '../../../../generated/graphql'
@@ -13,7 +14,11 @@ import { DetailCaption, MessageDetailBase, SeeMoreContent } from '../../detail'
 import { useMessage } from '../hooks/useAllMessages'
 import { useMethodName } from '../hooks/useMethodName'
 import { Lines, Line, StandardBox, PageTitle } from '../../../Layout'
-import { isAddrEqual, makeFriendlyBalance } from '../../../../utils'
+import {
+  isAddrEqual,
+  makeFriendlyBalance,
+  useStateCallQuery
+} from '../../../../utils'
 import {
   ExecReturn,
   getAddrFromReceipt
@@ -51,8 +56,31 @@ export default function MessageDetail(props: MessageDetailProps) {
   })
   const { data: msgRcptQuery, error: msgRcptError } = useMessageReceiptQuery({
     variables: { cid },
-    pollInterval: 10000
+    pollInterval: 0
   })
+
+  const { data: stateCallQuery, error: stateCallError } = useStateCallQuery({
+    variables: {
+      cid,
+      message: new Message({
+        to: 'f01',
+        from: 'f01001',
+        nonce: 0,
+        method: 0,
+        value: '0'
+      }).toLotusType()
+      // message: new Message({
+      //   to: message?.to?.robust || message?.to?.id || '',
+      //   from: message?.from?.robust || message?.from?.id || '',
+      //   nonce: Number(message?.nonce || 0),
+      //   method: Number(message?.method || 0),
+      //   value: message?.value || '0'
+      // }).toLotusType()
+    },
+    skip: !message
+  })
+
+  console.log('hiiii', stateCallQuery, stateCallError)
 
   const transactionFee = useMemo<string>(() => {
     if (pending) return 'Pending...'
@@ -192,7 +220,7 @@ export default function MessageDetail(props: MessageDetailProps) {
             )}
             {seeMore && (
               <SeeMoreContent
-                message={message as Message}
+                message={message as MessageType}
                 gasUsed={gasUsed}
                 gasCost={gasQuery?.gascost}
                 actorName={actorName}
